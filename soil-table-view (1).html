@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Data Table | Tamale</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            color: #000;
+            background-color: #fff;
+            width: 100%;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .project-title {
+            margin-bottom: 2.5rem;
+            text-align: left;
+        }
+        
+        .project-title h1 {
+            font-weight: 300;
+            font-size: 28px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .project-title h2 {
+            font-weight: 200;
+            font-size: 18px;
+            color: rgba(0, 0, 0, 0.7);
+            font-style: italic;
+        }
+        
+        .archive-title {
+            font-weight: 300;
+            font-size: 20px;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        
+        .soil-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            table-layout: fixed;
+        }
+        
+        .soil-table th {
+            text-align: left;
+            font-weight: 500;
+            padding: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        /* Set specific widths for columns */
+        .soil-table th:nth-child(1) { width: 8%; }  /* ID */
+        .soil-table th:nth-child(2) { width: 20%; } /* Title */
+        .soil-table th:nth-child(3) { width: 10%; } /* Site */
+        .soil-table th:nth-child(4) { width: 8%; }  /* pH - wider to prevent wrapping */
+        .soil-table th:nth-child(5) { width: 10%; } /* Temperature */
+        .soil-table th:nth-child(6) { width: 9%; }  /* Depth */
+        .soil-table th:nth-child(7) { width: 35%; } /* Description */
+        
+        .soil-table th {
+            text-align: left;
+            font-weight: 500;
+            padding: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        .soil-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-weight: 300;
+        }
+        
+        .soil-table tr:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        .sample-id {
+            font-weight: 400;
+            color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .site-cell, .ph-cell, .temp-cell {
+            white-space: nowrap;
+        }
+        
+        /* Style for search and filter controls */
+        .controls {
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .search-box {
+            padding: 8px 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            width: 250px;
+        }
+        
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="project-title">
+            <h1>The Soil Here is Restless</h1>
+            <h2>On the Movement, Memory, and Making of Soil in Tamale's Urban Ecologies</h2>
+        </div>
+        
+        <h3 class="archive-title">Soil Sample Archive</h3>
+        
+        <div class="controls">
+            <input type="text" class="search-box" id="search-box" placeholder="Search soil samples...">
+            <div>
+                <select class="filter-select" id="site-filter">
+                    <option value="">All Sites</option>
+                    <option value="Old Airfield">Old Airfield</option>
+                    <option value="Water Works">Water Works</option>
+                </select>
+                <select class="filter-select" id="ph-filter">
+                    <option value="">All pH Ranges</option>
+                    <option value="acidic">Acidic (pH < 6.5)</option>
+                    <option value="neutral">Neutral (pH 6.5-7.5)</option>
+                    <option value="alkaline">Alkaline (pH > 7.5)</option>
+                </select>
+            </div>
+        </div>
+        
+        <table class="soil-table" id="soil-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Site</th>
+                    <th>pH</th>
+                    <th>Temperature</th>
+                    <th>Depth</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Table rows will be added here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        // Soil data with added depth and description fields
+        const soilData = [
+            {
+                id: "OAF1",
+                name: "Soil Above Airfield Tarmac",
+                pH: "5.5-6.5",
+                temperature: "33-38°C",
+                site: "Old Airfield",
+                depth: "Surface",
+                description: "Topsoil layer collected above abandoned airfield tarmac, showing signs of anthropogenic impact."
+            },
+            {
+                id: "OAF2",
+                name: "Residential Soil with Ceramic Residue",
+                pH: "6.5-7.5",
+                temperature: "30-34°C",
+                site: "Old Airfield",
+                depth: "0-10cm",
+                description: "Contains ceramic fragments from previous residential structures. Moderately compacted."
+            },
+            {
+                id: "OAF3.1",
+                name: "Generic Topsoil (Surface)",
+                pH: "5.0-6.0",
+                temperature: "36-40°C",
+                site: "Old Airfield",
+                depth: "Surface",
+                description: "Baseline topsoil sample from undisturbed area near airfield perimeter."
+            },
+            {
+                id: "OAF3.2",
+                name: "Subsurface Soil",
+                pH: "6.0-6.5",
+                temperature: "25-30°C",
+                site: "Old Airfield",
+                depth: "15-30cm",
+                description: "Collected from below topsoil layer, shows less direct solar exposure."
+            },
+            {
+                id: "OAF4",
+                name: "Burned Black Soil (Puddle Edge)",
+                pH: "4.5-5.5",
+                temperature: "28-32°C",
+                site: "Old Airfield",
+                depth: "0-5cm",
+                description: "Darkened soil from burn site, collected at edge of water puddle formation."
+            },
+            {
+                id: "OAF5",
+                name: "Construction Sands",
+                pH: "6.5-8.0",
+                temperature: "30-38°C",
+                site: "Old Airfield",
+                depth: "10-25cm",
+                description: "Sandy material likely used during airfield construction, highly permeable."
+            },
+            {
+                id: "OAF6.1",
+                name: "Gravel Layer",
+                pH: "7.0-8.5",
+                temperature: "30-35°C",
+                site: "Old Airfield",
+                depth: "20-40cm",
+                description: "Compacted gravel layer from foundational structure, high mineral content."
+            },
+            {
+                id: "OAF6.2",
+                name: "Subsurface Gravel with Clay Infill",
+                pH: "6.8-7.2",
+                temperature: "28-30°C",
+                site: "Old Airfield",
+                depth: "30-50cm",
+                description: "Gravel with clay infiltration, creating semi-permeable layer structure."
+            },
+            {
+                id: "OAF7",
+                name: "Sand Pile Residue Soil",
+                pH: "7.0-7.5",
+                temperature: "32-36°C",
+                site: "Old Airfield",
+                depth: "Surface",
+                description: "Collected from remnants of construction sand pile, low organic content."
+            },
+            {
+                id: "OAF8",
+                name: "Excavated Edge Soil",
+                pH: "6.0-6.5",
+                temperature: "30-32°C",
+                site: "Old Airfield",
+                depth: "0-20cm",
+                description: "Soil from edge of recent excavation, mixed horizons visible."
+            },
+            {
+                id: "OAF9",
+                name: "Soil Immediately After Burn",
+                pH: "4.5-5.0",
+                temperature: "60-70°C",
+                site: "Old Airfield",
+                depth: "0-2cm",
+                description: "Hot soil sample collected immediately following controlled burn event."
+            },
+            {
+                id: "OAF10",
+                name: "Soil 1 Day After Burn",
+                pH: "5.0-5.5",
+                temperature: "34-38°C",
+                site: "Old Airfield",
+                depth: "0-2cm",
+                description: "24-hour post-burn soil showing initial cooling and ash incorporation."
+            },
+            {
+                id: "OAF11",
+                name: "Soil 2 Weeks After Burn",
+                pH: "6.0-6.5",
+                temperature: "30-32°C",
+                site: "Old Airfield",
+                depth: "0-2cm",
+                description: "Post-burn soil showing early recovery and pH normalization after 14 days."
+            },
+            {
+                id: "OAF12",
+                name: "Charcoal-Embedded Soil",
+                pH: "5.5-6.0",
+                temperature: "32-36°C",
+                site: "Old Airfield",
+                depth: "0-5cm",
+                description: "Contains high concentration of charcoal fragments from historical burning."
+            },
+            {
+                id: "OAF13",
+                name: "Scorched Edge Soil Near Concrete",
+                pH: "5.0-5.5",
+                temperature: "36-40°C",
+                site: "Old Airfield",
+                depth: "0-3cm",
+                description: "Heat-affected soil collected near concrete infrastructure boundary."
+            },
+            {
+                id: "OAF14",
+                name: "Irrigated Test Plot Soil",
+                pH: "6.5-7.0",
+                temperature: "27-30°C",
+                site: "Old Airfield",
+                depth: "0-15cm",
+                description: "Regularly irrigated soil from experimental agricultural plot."
+            },
+            {
+                id: "OAF15",
+                name: "Subsurface Irrigated Soil",
+                pH: "6.8-7.2",
+                temperature: "26-28°C",
+                site: "Old Airfield",
+                depth: "15-30cm",
+                description: "Collected from below irrigation zone, shows moisture penetration patterns."
+            },
+            {
+                id: "OAF16",
+                name: "Post-Rain Puddle Soil",
+                pH: "6.5-7.0",
+                temperature: "25-28°C",
+                site: "Old Airfield",
+                depth: "0-5cm",
+                description: "Saturated soil collected from temporary puddle formation after rainfall."
+            },
+            {
+                id: "OAF17",
+                name: "Sun-Dried Irrigated Soil",
+                pH: "6.0-6.5",
+                temperature: "34-38°C",
+                site: "Old Airfield",
+                depth: "0-5cm",
+                description: "Previously irrigated soil that has undergone solar drying for 3+ days."
+            },
+            {
+                id: "OAF18",
+                name: "Deep Subsurface Soil",
+                pH: "6.8-7.2",
+                temperature: "25-27°C",
+                site: "Old Airfield",
+                depth: "50-70cm",
+                description: "Collected from deep excavation, minimal direct environmental influence."
+            },
+            {
+                id: "OAF19",
+                name: "Runoff Channel Soil",
+                pH: "6.5-7.0",
+                temperature: "28-30°C",
+                site: "Old Airfield",
+                depth: "0-10cm",
+                description: "Collected from natural water drainage path, shows sediment transport patterns."
+            },
+            {
+                id: "OAF20",
+                name: "Shade Soil Beneath Tree at Airfield Edge",
+                pH: "6.8-7.2",
+                temperature: "27-30°C",
+                site: "Old Airfield",
+                depth: "0-10cm",
+                description: "Permanently shaded soil with higher organic matter from leaf decomposition."
+            },
+            {
+                id: "OAF21",
+                name: "Soil Along Abandoned Wall",
+                pH: "6.2-6.8",
+                temperature: "32-36°C",
+                site: "Old Airfield",
+                depth: "0-15cm",
+                description: "Collected adjacent to deteriorating concrete wall, shows structural influences."
+            },
+            {
+                id: "OAF22",
+                name: "Tire-Impressed Soil",
+                pH: "6.5-7.0",
+                temperature: "30-34°C",
+                site: "Old Airfield",
+                depth: "0-10cm",
+                description: "Highly compacted from vehicle traffic, distinctive structure pattern."
+            },
+            {
+                id: "OAF23",
+                name: "Windblown Red Dust",
+                pH: "5.5-6.0",
+                temperature: "36-40°C",
+                site: "Old Airfield",
+                depth: "Surface",
+                description: "Fine particle surface accumulation from recent dust storm events."
+            },
+            {
+                id: "WAWO1.1",
+                name: "Burned Renewal Soil",
+                pH: "5.5-6.0",
+                temperature: "32-36°C",
+                site: "Water Works",
+                depth: "0-5cm",
+                description: "Soil from controlled burn area used for agricultural renewal practices."
+            },
+            {
+                id: "WAWO1.2",
+                name: "Cabbage Patch Soil",
+                pH: "6.8-7.2",
+                temperature: "28-32°C",
+                site: "Water Works",
+                depth: "0-20cm",
+                description: "Actively cultivated soil from cabbage growing area, regularly worked."
+            },
+            {
+                id: "WAWO1.3",
+                name: "Freshly Planted Soil",
+                pH: "6.0-6.5",
+                temperature: "26-30°C",
+                site: "Water Works",
+                depth: "0-15cm",
+                description: "Recently tilled and planted soil with added compost amendments."
+            },
+            {
+                id: "WAWO1.4",
+                name: "Soil 20 Minutes After Burn",
+                pH: "5.0-5.5",
+                temperature: "45-55°C",
+                site: "Water Works",
+                depth: "0-3cm",
+                description: "Early post-burn soil showing initial cooling phase, collected while still warm."
+            },
+            {
+                id: "WAWO1.5",
+                name: "Irrigated Evening Soil",
+                pH: "6.5-7.0",
+                temperature: "26-28°C",
+                site: "Water Works",
+                depth: "0-10cm",
+                description: "Collected after evening irrigation cycle, optimal moisture content."
+            },
+            {
+                id: "WAWO2.1",
+                name: "Treaded Buffer Soil",
+                pH: "7.0-7.5",
+                temperature: "32-36°C",
+                site: "Water Works",
+                depth: "0-15cm",
+                description: "Compacted soil from footpath area between cultivation plots."
+            },
+            {
+                id: "WAWO2.2",
+                name: "Subsurface Buffer Soil",
+                pH: "7.2-7.8",
+                temperature: "28-32°C",
+                site: "Water Works",
+                depth: "15-30cm",
+                description: "Collected below buffer zone path, shows compaction effects at depth."
+            },
+            {
+                id: "WAWO2.3",
+                name: "Shaded Buffer Soil under Neem Tree",
+                pH: "6.8-7.0",
+                temperature: "27-30°C",
+                site: "Water Works",
+                depth: "0-10cm",
+                description: "Buffer zone soil with neem tree influence, allelopathic effects observable."
+            },
+            {
+                id: "WAWO2.4",
+                name: "Edge-of-Furrow Soil",
+                pH: "6.2-6.5",
+                temperature: "30-34°C",
+                site: "Water Works",
+                depth: "0-10cm",
+                description: "Transition zone between plowed furrow and unworked soil, mixed structure."
+            },
+            {
+                id: "WAWO2.5",
+                name: "Compacted Clay Corner Soil",
+                pH: "7.5-8.0",
+                temperature: "32-36°C",
+                site: "Water Works",
+                depth: "0-20cm",
+                description: "High clay content soil from field corner with minimal cultivation history."
+            },
+            {
+                id: "WAWO3",
+                name: "Contaminated Post-Trash Soil",
+                pH: "4.0-5.0",
+                temperature: "34-38°C",
+                site: "Water Works",
+                depth: "0-15cm",
+                description: "Remediated soil from former waste disposal area, shows lingering acidity."
+            },
+            {
+                id: "WAWO4",
+                name: "Regenerating Subsurface Soil",
+                pH: "6.5-7.0",
+                temperature: "30-34°C",
+                site: "Water Works",
+                depth: "15-40cm",
+                description: "Recovering subsurface layer beneath remediated area, showing improved structure."
+            },
+            {
+                id: "WAWO5",
+                name: "Powerplant Proximal Soil",
+                pH: "6.8-7.2",
+                temperature: "32-36°C",
+                site: "Water Works",
+                depth: "0-15cm",
+                description: "Collected near local powerplant, shows mild thermal influence."
+            },
+            {
+                id: "WAWO6",
+                name: "Tomato Farming Soil",
+                pH: "6.0-6.8",
+                temperature: "30-34°C",
+                site: "Water Works",
+                depth: "0-20cm",
+                description: "Long-term tomato cultivation soil, regularly amended with compost."
+            },
+            {
+                id: "WAWO6.1",
+                name: "Irrigated Tomato Soil",
+                pH: "6.2-6.8",
+                temperature: "28-30°C",
+                site: "Water Works",
+                depth: "0-15cm",
+                description: "Active tomato plot soil collected after irrigation cycle, optimal moisture."
+            },
+            {
+                id: "WAWO7",
+                name: "Watering Hole Soil",
+                pH: "7.0-7.5",
+                temperature: "28-32°C",
+                site: "Water Works",
+                depth: "0-10cm",
+                description: "Collected from animal watering area, shows frequent saturation patterns."
+            },
+            {
+                id: "WAWO8",
+                name: "Dry Riverbed Soil",
+                pH: "7.0-7.8",
+                temperature: "34-38°C",
+                site: "Water Works",
+                depth: "0-15cm",
+                description: "Collected from seasonal riverbed during dry period, shows layered sediment structure."
+            },
+            {
+                id: "WAWO8.1",
+                name: "Shallow River Margin Soil",
+                pH: "6.8-7.2",
+                temperature: "28-30°C",
+                site: "Water Works",
+                depth: "0-10cm",
+                description: "From transitional zone between aquatic and terrestrial environments."
+            },
+            {
+                id: "WAWO8.2",
+                name: "Subsurface River Margin",
+                pH: "7.2-7.6",
+                temperature: "26-28°C",
+                site: "Water Works",
+                depth: "15-30cm",
+                description: "Collected below river margin, shows water table influence patterns."
+            },
+            {
+                id: "WAWO8.3",
+                name: "Sun-Baked Riverbank Edge Soil",
+                pH: "6.5-7.0",
+                temperature: "36-40°C",
+                site: "Water Works",
+                depth: "0-5cm",
+                description: "Exposed riverbank soil showing desiccation cracks from solar exposure."
+            },
+            {
+                id: "WAWO9",
+                name: "Fallow Field Soil",
+                pH: "6.5-7.0",
+                temperature: "30-34°C",
+                site: "Water Works",
+                depth: "0-20cm",
+                description: "Resting agricultural soil, unplanted for current season, shows recovery patterns."
+            },
+            {
+                id: "WAWO10",
+                name: "Irrigation Channel Sediment",
+                pH: "6.8-7.2",
+                temperature: "27-30°C",
+                site: "Water Works",
+                depth: "0-10cm",
+                description: "Sediment collected from active irrigation channel, high silt content."
+            },
+            {
+                id: "WAWO11",
+                name: "Roadside Dust Soil",
+                pH: "6.0-6.5",
+                temperature: "34-38°C",
+                site: "Water Works",
+                depth: "0-5cm",
+                description: "Fine particulate soil from road edge, shows vehicle exhaust influence."
+            },
+            {
+                id: "WAWO12",
+                name: "Post-Rain Puddle Soil",
+                pH: "6.5-7.0",
+                temperature: "25-28°C",
+                site: "Water Works",
+                depth: "0-5cm",
+                description: "Collected from depression after rainfall, shows temporary saturation effects."
+            },
+            {
+                id: "WAWO13",
+                name: "Windblown Field Edge Soil",
+                pH: "6.0-6.5",
+                temperature: "32-36°C",
+                site: "Water Works",
+                depth: "0-5cm",
+                description: "Accumulated windblown material at field boundary, fine particle composition."
+            }
+        ];
+        
+        // Function to populate table
+        function populateTable(data) {
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = ''; // Clear existing rows
+            
+            data.forEach(sample => {
+                const row = document.createElement('tr');
+                
+                // Create cells
+                row.innerHTML = `
+                    <td><span class="sample-id">${sample.id}</span></td>
+                    <td>${sample.name}</td>
+                    <td class="site-cell">${sample.site}</td>
+                    <td class="ph-cell">${sample.pH}</td>
+                    <td class="temp-cell">${sample.temperature}</td>
+                    <td>${sample.depth}</td>
+                    <td>${sample.description}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Function to filter data based on search and filter selections
+        function filterData() {
+            const searchTerm = document.getElementById('search-box').value.toLowerCase();
+            const siteFilter = document.getElementById('site-filter').value;
+            const phFilter = document.getElementById('ph-filter').value;
+            
+            let filteredData = soilData.filter(sample => {
+                // Search term filter
+                const matchesSearch = 
+                    sample.id.toLowerCase().includes(searchTerm) ||
+                    sample.name.toLowerCase().includes(searchTerm) ||
+                    sample.site.toLowerCase().includes(searchTerm) ||
+                    sample.depth.toLowerCase().includes(searchTerm) ||
+                    sample.description.toLowerCase().includes(searchTerm);
+                
+                // Site filter
+                const matchesSite = siteFilter === '' || sample.site === siteFilter;
+                
+                // pH filter
+                let matchesPh = true;
+                if (phFilter !== '') {
+                    const phLow = parseFloat(sample.pH.split('-')[0]);
+                    
+                    if (phFilter === 'acidic' && phLow >= 6.5) matchesPh = false;
+                    if (phFilter === 'neutral' && (phLow < 6.5 || phLow > 7.5)) matchesPh = false;
+                    if (phFilter === 'alkaline' && phLow <= 7.5) matchesPh = false;
+                }
+                
+                return matchesSearch && matchesSite && matchesPh;
+            });
+            
+            populateTable(filteredData);
+        }
+        
+        // Initialize table
+        document.addEventListener('DOMContentLoaded', () => {
+            populateTable(soilData);
+            
+            // Add event listeners for filtering
+            document.getElementById('search-box').addEventListener('input', filterData);
+            document.getElementById('site-filter').addEventListener('change', filterData);
+            document.getElementById('ph-filter').addEventListener('change', filterData);
+        });
+    </script>
+</body>
+</html>

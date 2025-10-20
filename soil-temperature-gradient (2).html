@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Temperature Visualization | Tamale</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            color: #000;
+            background-color: #fff;
+            width: 100%;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .project-title {
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+        
+        .project-title h1 {
+            font-weight: 300;
+            font-size: 28px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .project-title h2 {
+            font-weight: 200;
+            font-size: 18px;
+            color: rgba(0, 0, 0, 0.7);
+            font-style: italic;
+        }
+        
+        .temperature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .soil-sample {
+            aspect-ratio: 1/1;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-clip: padding-box;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .soil-sample:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .sample-name {
+            font-size: 12px;
+            font-weight: 400;
+            margin-bottom: 0.5rem;
+            padding: 2px 4px;
+            background-color: rgba(255, 255, 255, 0.85);
+            border-radius: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            display: inline-block;
+        }
+        
+        .sample-temp {
+            font-size: 12px;
+            font-weight: 200;
+            color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 2px 4px;
+            border-radius: 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            display: inline-block;
+        }
+        
+        .legend {
+            margin: 1rem 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 300;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="project-title">
+            <h1>The Soil Here is Restless</h1>
+            <h2>On the Movement, Memory, and Making of Soil in Tamale's Urban Ecologies</h2>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: radial-gradient(circle, #053d7a 10%, #0d6edf 50%, rgba(255, 255, 255, 0) 90%), white;"></div>
+                <span>Cool (25-30°C)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: radial-gradient(circle, #1a94d2 10%, #34b8cb 50%, rgba(255, 255, 255, 0) 90%), white;"></div>
+                <span>Mild (30-35°C)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: radial-gradient(circle, #8aaed0 10%, #e36bae 50%, rgba(255, 255, 255, 0) 90%), white;"></div>
+                <span>Warm (35-40°C)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: radial-gradient(circle, #eb4d96 10%, #d81b60 50%, rgba(255, 255, 255, 0) 90%), white;"></div>
+                <span>Hot (40-70°C)</span>
+            </div>
+        </div>
+        
+        <div class="temperature-grid" id="temperature-grid">
+            <!-- Sample items will be added here by JavaScript -->
+        </div>
+    </div>
+    
+    <script>
+        // Soil data with temperature values
+        const soilData = [
+            {
+                id: "OAF1",
+                name: "Soil Above Airfield Tarmac",
+                temperature: "33-38°C",
+                tempHigh: 38
+            },
+            {
+                id: "OAF2",
+                name: "Residential Soil with Ceramic Residue",
+                temperature: "30-34°C",
+                tempHigh: 34
+            },
+            {
+                id: "OAF3.1",
+                name: "Generic Topsoil (Surface)",
+                temperature: "36-40°C",
+                tempHigh: 40
+            },
+            {
+                id: "OAF3.2",
+                name: "Subsurface Soil",
+                temperature: "25-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "OAF4",
+                name: "Burned Black Soil (Puddle Edge)",
+                temperature: "28-32°C",
+                tempHigh: 32
+            },
+            {
+                id: "OAF5",
+                name: "Construction Sands",
+                temperature: "30-38°C",
+                tempHigh: 38
+            },
+            {
+                id: "OAF6.1",
+                name: "Gravel Layer",
+                temperature: "30-35°C",
+                tempHigh: 35
+            },
+            {
+                id: "OAF6.2",
+                name: "Subsurface Gravel with Clay Infill",
+                temperature: "28-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "OAF7",
+                name: "Sand Pile Residue Soil",
+                temperature: "32-36°C",
+                tempHigh: 36
+            },
+            {
+                id: "OAF8",
+                name: "Excavated Edge Soil",
+                temperature: "30-32°C",
+                tempHigh: 32
+            },
+            {
+                id: "OAF9",
+                name: "Soil Immediately After Burn",
+                temperature: "60-70°C",
+                tempHigh: 70
+            },
+            {
+                id: "OAF10",
+                name: "Soil 1 Day After Burn",
+                temperature: "34-38°C",
+                tempHigh: 38
+            },
+            {
+                id: "OAF11",
+                name: "Soil 2 Weeks After Burn",
+                temperature: "30-32°C",
+                tempHigh: 32
+            },
+            {
+                id: "OAF12",
+                name: "Charcoal-Embedded Soil",
+                temperature: "32-36°C",
+                tempHigh: 36
+            },
+            {
+                id: "OAF13",
+                name: "Scorched Edge Soil Near Concrete",
+                temperature: "36-40°C",
+                tempHigh: 40
+            },
+            {
+                id: "OAF14",
+                name: "Irrigated Test Plot Soil",
+                temperature: "27-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "OAF15",
+                name: "Subsurface Irrigated Soil",
+                temperature: "26-28°C",
+                tempHigh: 28
+            },
+            {
+                id: "OAF16",
+                name: "Post-Rain Puddle Soil",
+                temperature: "25-28°C",
+                tempHigh: 28
+            },
+            {
+                id: "OAF17",
+                name: "Sun-Dried Irrigated Soil",
+                temperature: "34-38°C",
+                tempHigh: 38
+            },
+            {
+                id: "OAF18",
+                name: "Deep Subsurface Soil",
+                temperature: "25-27°C",
+                tempHigh: 27
+            },
+            {
+                id: "OAF19",
+                name: "Runoff Channel Soil",
+                temperature: "28-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "OAF20",
+                name: "Shade Soil Beneath Tree at Airfield Edge",
+                temperature: "27-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "OAF21",
+                name: "Soil Along Abandoned Wall",
+                temperature: "32-36°C",
+                tempHigh: 36
+            },
+            {
+                id: "OAF22",
+                name: "Tire-Impressed Soil",
+                temperature: "30-34°C",
+                tempHigh: 34
+            },
+            {
+                id: "OAF23",
+                name: "Windblown Red Dust",
+                temperature: "36-40°C",
+                tempHigh: 40
+            },
+            {
+                id: "WAWO1.1",
+                name: "Burned Renewal Soil",
+                temperature: "32-36°C",
+                tempHigh: 36
+            },
+            {
+                id: "WAWO1.2",
+                name: "Cabbage Patch Soil",
+                temperature: "28-32°C",
+                tempHigh: 32
+            },
+            {
+                id: "WAWO1.3",
+                name: "Freshly Planted Soil",
+                temperature: "26-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "WAWO1.4",
+                name: "Soil 20 Minutes After Burn",
+                temperature: "45-55°C",
+                tempHigh: 55
+            },
+            {
+                id: "WAWO1.5",
+                name: "Irrigated Evening Soil",
+                temperature: "26-28°C",
+                tempHigh: 28
+            },
+            {
+                id: "WAWO2.1",
+                name: "Treaded Buffer Soil",
+                temperature: "32-36°C",
+                tempHigh: 36
+            },
+            {
+                id: "WAWO2.2",
+                name: "Subsurface Buffer Soil",
+                temperature: "28-32°C",
+                tempHigh: 32
+            },
+            {
+                id: "WAWO2.3",
+                name: "Shaded Buffer Soil under Neem Tree",
+                temperature: "27-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "WAWO2.4",
+                name: "Edge-of-Furrow Soil",
+                temperature: "30-34°C",
+                tempHigh: 34
+            },
+            {
+                id: "WAWO2.5",
+                name: "Compacted Clay Corner Soil",
+                temperature: "32-36°C",
+                tempHigh: 36
+            },
+            {
+                id: "WAWO3",
+                name: "Contaminated Post-Trash Soil",
+                temperature: "34-38°C",
+                tempHigh: 38
+            },
+            {
+                id: "WAWO4",
+                name: "Regenerating Subsurface Soil",
+                temperature: "30-34°C",
+                tempHigh: 34
+            },
+            {
+                id: "WAWO5",
+                name: "Powerplant Proximal Soil",
+                temperature: "32-36°C",
+                tempHigh: 36
+            },
+            {
+                id: "WAWO6",
+                name: "Tomato Farming Soil",
+                temperature: "30-34°C",
+                tempHigh: 34
+            },
+            {
+                id: "WAWO6.1",
+                name: "Irrigated Tomato Soil",
+                temperature: "28-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "WAWO7",
+                name: "Watering Hole Soil",
+                temperature: "28-32°C",
+                tempHigh: 32
+            },
+            {
+                id: "WAWO8",
+                name: "Dry Riverbed Soil",
+                temperature: "34-38°C",
+                tempHigh: 38
+            },
+            {
+                id: "WAWO8.1",
+                name: "Shallow River Margin Soil",
+                temperature: "28-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "WAWO8.2",
+                name: "Subsurface River Margin",
+                temperature: "26-28°C",
+                tempHigh: 28
+            },
+            {
+                id: "WAWO8.3",
+                name: "Sun-Baked Riverbank Edge Soil",
+                temperature: "36-40°C",
+                tempHigh: 40
+            },
+            {
+                id: "WAWO9",
+                name: "Fallow Field Soil",
+                temperature: "30-34°C",
+                tempHigh: 34
+            },
+            {
+                id: "WAWO10",
+                name: "Irrigation Channel Sediment",
+                temperature: "27-30°C",
+                tempHigh: 30
+            },
+            {
+                id: "WAWO11",
+                name: "Roadside Dust Soil",
+                temperature: "34-38°C",
+                tempHigh: 38
+            },
+            {
+                id: "WAWO12",
+                name: "Post-Rain Puddle Soil",
+                temperature: "25-28°C",
+                tempHigh: 28
+            },
+            {
+                id: "WAWO13",
+                name: "Windblown Field Edge Soil",
+                temperature: "32-36°C",
+                tempHigh: 36
+            }
+        ];
+        
+        // Function to get gradient colors based on temperature with white fade
+        function getTemperatureGradient(tempValue) {
+            if (tempValue <= 28) {
+                // Cool: Deep blue gradient (25-28°C) with white fade
+                return 'radial-gradient(circle, #053d7a 10%, #0d6edf 50%, rgba(255, 255, 255, 0) 90%), white';
+            } else if (tempValue <= 30) {
+                // Cool to Mild transition (28-30°C) with white fade
+                return 'radial-gradient(circle, #0d6edf 10%, #1a94d2 50%, rgba(255, 255, 255, 0) 90%), white';
+            } else if (tempValue <= 32) {
+                // Mild: Medium blue to teal (30-32°C) with white fade
+                return 'radial-gradient(circle, #1a94d2 10%, #34b8cb 50%, rgba(255, 255, 255, 0) 90%), white';
+            } else if (tempValue <= 35) {
+                // Mild to Warm transition (32-35°C) with white fade
+                return 'radial-gradient(circle, #34b8cb 10%, #8aaed0 50%, rgba(255, 255, 255, 0) 90%), white';
+            } else if (tempValue <= 38) {
+                // Warm: Teal to pink (35-38°C) with white fade
+                return 'radial-gradient(circle, #8aaed0 10%, #e36bae 50%, rgba(255, 255, 255, 0) 90%), white';
+            } else if (tempValue <= 40) {
+                // Warm to Hot transition (38-40°C) with white fade
+                return 'radial-gradient(circle, #e36bae 10%, #eb4d96 50%, rgba(255, 255, 255, 0) 90%), white';
+            } else {
+                // Hot: Pink to deep rose (>40°C) with white fade
+                return 'radial-gradient(circle, #eb4d96 10%, #d81b60 50%, rgba(255, 255, 255, 0) 90%), white';
+            }
+        }
+        
+        // Sort samples by temperature from coolest to warmest
+        function populateTemperatureGrid() {
+            const sortedSoilData = [...soilData].sort((a, b) => a.tempHigh - b.tempHigh);
+            const grid = document.getElementById('temperature-grid');
+            
+            sortedSoilData.forEach(sample => {
+                const sampleElement = document.createElement('div');
+                sampleElement.className = 'soil-sample';
+                
+                // Set background gradient based on temperature
+                sampleElement.style.background = getTemperatureGradient(sample.tempHigh);
+                
+                // Add sample information
+                sampleElement.innerHTML = `
+                    <div class="sample-name">${sample.name}</div>
+                    <div class="sample-temp">${sample.temperature}</div>
+                `;
+                
+                grid.appendChild(sampleElement);
+            });
+        }
+        
+        // Initialize grid on page load
+        window.addEventListener('load', populateTemperatureGrid);
+    </script>
+</body>
+</html>

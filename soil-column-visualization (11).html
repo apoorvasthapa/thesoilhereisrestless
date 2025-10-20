@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Strata Visualization | Tamale</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            color: #000;
+            background-color: #fff;
+            width: 100%;
+            overflow-x: hidden;
+            padding-left: 100px; /* Add left padding for depth markers */
+        }
+        
+        .current-depth-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700; /* Bolder */
+            font-size: 24px; /* Larger font */
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        
+        .depth-marker {
+            position: absolute;
+            left: -90px; /* Position to the left of the content */
+            font-size: 14px;
+            font-weight: 300;
+            color: #000;
+            transform: translateY(-50%);
+            width: 80px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        .soil-layer-line {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: rgba(0, 0, 0, 0.05);
+            z-index: 5;
+        }
+        
+        .soil-column {
+            width: 100%;
+            min-height: 5000px; /* Much longer to space out samples */
+            position: relative;
+            padding-top: 100px;
+            padding-bottom: 500px;
+        }
+        
+        .soil-sample {
+            position: absolute;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            opacity: 1;
+        }
+        
+        .sample-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #000;
+            margin-bottom: 5px;
+        }
+        
+        .sample-line {
+            width: 1px;
+            height: 30px;
+            background-color: rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
+        }
+        
+        .sample-content {
+            text-align: left;
+            max-width: 350px;
+        }
+        
+        .sample-title {
+            font-size: 18px;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+        
+        .sample-metadata {
+            font-size: 12px;
+            color: rgba(0, 0, 0, 0.7);
+            margin-bottom: 6px;
+            font-weight: 200;
+        }
+        
+        .sample-description {
+            font-size: 12px;
+            line-height: 1.4;
+            font-weight: 200;
+            text-align: left;
+        }
+        
+        @media (max-width: 768px) {
+            .soil-sample {
+                width: 90%;
+            }
+            
+            .sample-title {
+                font-size: 16px;
+            }
+            
+            .current-depth-indicator {
+                font-size: 20px;
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="current-depth-indicator">Depth: 0 mm</div>
+    
+    <div class="soil-column" id="soil-column">
+        <!-- Depth lines and soil samples will be added via JS -->
+    </div>
+    
+    <script>
+        // Soil sample data with paired depths
+        const soilData = [
+            // Depth 0mm (Surface samples)
+            {
+                id: "OAF3.1",
+                name: "Generic Topsoil (Surface)",
+                depth: 0,
+                pH: "5.0-6.0",
+                temperature: "36-40°C",
+                description: "Fine, loose, intensely red soil from iron oxidation; shaped by Harmattan winds; ideal for inhabitation by termites and desert-adapted bacteria.",
+                category: "Surface & Residue",
+                site: "Old Airfield",
+                position: "left" // Left side
+            },
+            {
+                id: "WAWO1.1",
+                name: "Burned Renewal Soil",
+                depth: 0,
+                pH: "5.5-6.0",
+                temperature: "32-36°C",
+                description: "Soil from an agricultural field purposely burned to clear residues and release nutrients. Controlled fire primes renewal but reduces microbial diversity.",
+                category: "Agricultural & Renewal",
+                site: "Water Works",
+                position: "right" // Right side
+            },
+            
+            // Depth 50mm
+            {
+                id: "WAWO1.2",
+                name: "Cabbage Patch Soil",
+                depth: 50,
+                pH: "6.8-7.2",
+                temperature: "28-32°C",
+                description: "Rich, brown soil under dense cabbage patches. Supports earthworms, microbes, and foraging white birds; a dynamic interplay of natural and human activity.",
+                category: "Agricultural & Renewal",
+                site: "Water Works",
+                position: "left"
+            },
+            {
+                id: "OAF1",
+                name: "Soil Above Airfield Tarmac",
+                depth: 50,
+                pH: "5.5-6.5",
+                temperature: "33-38°C",
+                description: "Thin, inconsistent soil layer above historic bitumen; sparse, possibly hosting Actinobacteria breaking down hydrocarbons; instability renders life precarious.",
+                category: "Surface & Residue",
+                site: "Old Airfield",
+                position: "right"
+            },
+            
+            // Depth 100mm
+            {
+                id: "OAF2",
+                name: "Residential Soil with Ceramic Residue",
+                depth: 100,
+                pH: "6.5-7.5",
+                temperature: "30-34°C",
+                description: "Loose, brown soil mixed with ceramic waste; supports modest organic activity (earthworms, nematodes, fungi); transitional and human-modified.",
+                category: "Surface & Residue",
+                site: "Old Airfield",
+                position: "left"
+            },
+            {
+                id: "WAWO8",
+                name: "Dry Riverbed Soil",
+                depth: 100,
+                pH: "7.0-7.8",
+                temperature: "34-38°C",
+                description: "Soil from a dry riverbed, coarse and eroded by relentless sun and wind. Its minimal moisture and exposed texture speak to a harsh, transient landscape.",
+                category: "Depths & Riverine",
+                site: "Water Works",
+                position: "right"
+            },
+            
+            // Depth 150mm
+            {
+                id: "WAWO2.1",
+                name: "Treaded Buffer Soil",
+                depth: 150,
+                pH: "7.0-7.5",
+                temperature: "32-36°C",
+                description: "Non-agricultural soil between cultivation patches, frequently trodden by humans. Dry, compacted, with decomposing plantain and mango leaves, showing clear anthropogenic impact.",
+                category: "Buffer & Pathway",
+                site: "Water Works",
+                position: "left"
+            },
+            {
+                id: "OAF5",
+                name: "Construction Sands",
+                depth: 150,
+                pH: "6.5-8.0",
+                temperature: "30-38°C",
+                description: "Varied colored sands with differing grain sizes; likely sourced from regional quarries or riverbeds; inert, engineered for building; minimal biological activity.",
+                category: "Construction & Inert",
+                site: "Old Airfield",
+                position: "right"
+            },
+            
+            // Depth 200mm
+            {
+                id: "WAWO1.3",
+                name: "Freshly Planted Soil",
+                depth: 200,
+                pH: "6.0-6.5",
+                temperature: "26-30°C",
+                description: "Recently prepared, moist soil with tiny green sprouts. Finely textured and fragrant, it's freshly irrigated to counter the dry season's extremes.",
+                category: "Agricultural & Renewal",
+                site: "Water Works",
+                position: "left"
+            },
+            {
+                id: "OAF6.1",
+                name: "Gravel Layer",
+                depth: 200,
+                pH: "7.0-8.5",
+                temperature: "30-35°C",
+                description: "Reddish, small rock aggregates, probably crushed laterite; stable and inert; may support minimal microbial films and provide microhabitats for burrowing arthropods.",
+                category: "Construction & Inert",
+                site: "Old Airfield",
+                position: "right"
+            },
+            
+            // Depth 250mm
+            {
+                id: "OAF4",
+                name: "Burned Black Soil (Puddle Edge)",
+                depth: 250,
+                pH: "4.5-5.5",
+                temperature: "28-32°C",
+                description: "Fine, blackened soil from burning; acidic, with remnants of char; likely harbors thermophilic fungi (e.g., Pyronema) and specialized bacteria.",
+                category: "Surface & Residue",
+                site: "Old Airfield",
+                position: "left"
+            },
+            {
+                id: "WAWO7",
+                name: "Watering Hole Soil",
+                depth: 250,
+                pH: "7.0-7.5",
+                temperature: "28-32°C",
+                description: "Sampled from a 2.5-3 m deep watering hole, this light brown soil reflects fluctuating water levels; on dry days, it hosts moisture-adapted microbes.",
+                category: "Depths & Riverine",
+                site: "Water Works",
+                position: "right"
+            },
+            
+            // Depth 300mm
+            {
+                id: "WAWO6",
+                name: "Tomato Farming Soil",
+                depth: 300,
+                pH: "6.0-6.8",
+                temperature: "30-34°C",
+                description: "Soil from a tomato farm marked by a dry tomato and a decomposing red tomato, capturing the cyclical dance of growth and decay in agriculture.",
+                category: "Waste & Contamination",
+                site: "Water Works",
+                position: "left"
+            },
+            {
+                id: "OAF10",
+                name: "Soil 1 Day After Burn",
+                depth: 300,
+                pH: "5.0-5.5",
+                temperature: "34-38°C",
+                description: "Soil sampled one day after controlled burning, showing an ash layer and beginning to cool. Initial bacterial recolonization is starting at the edges of the burned zone.",
+                category: "Burn & Disturbance",
+                site: "Old Airfield",
+                position: "right"
+            },
+            
+            // Depth 350mm
+            {
+                id: "WAWO3",
+                name: "Contaminated Post-Trash Soil",
+                depth: 350,
+                pH: "4.0-5.0",
+                temperature: "34-38°C",
+                description: "Dark brown soil from beneath a pile of anthropogenic trash. Mixed with burnt particles and plastic remnants, its acidified state disrupts microbial balance.",
+                category: "Waste & Contamination",
+                site: "Water Works",
+                position: "left"
+            },
+            {
+                id: "OAF11",
+                name: "Soil 2 Weeks After Burn",
+                depth: 350,
+                pH: "6.0-6.5",
+                temperature: "30-32°C",
+                description: "Two weeks post-burning, soil showing signs of recovery with partially restored pH and some emergent microbial activity, particularly heat-resistant fungal species.",
+                category: "Burn & Disturbance",
+                site: "Old Airfield",
+                position: "right"
+            },
+            
+            // Depth 400mm
+            {
+                id: "WAWO2.2",
+                name: "Subsurface Buffer Soil",
+                depth: 400,
+                pH: "7.2-7.8",
+                temperature: "28-32°C",
+                description: "Located 15 cm below the surface, this finer, more moist soil is less disturbed, supporting modest microbial activity and initial root growth.",
+                category: "Buffer & Pathway",
+                site: "Water Works",
+                position: "left"
+            },
+            {
+                id: "OAF14",
+                name: "Irrigated Test Plot Soil",
+                depth: 400,
+                pH: "6.5-7.0",
+                temperature: "27-30°C",
+                description: "Surface layer of experimentally irrigated soil section, showing darker, wet clods with improved water retention and initial seedling establishment.",
+                category: "Moisture & Depth",
+                site: "Old Airfield",
+                position: "right"
+            },
+            
+            // Depth 450mm
+            {
+                id: "WAWO4",
+                name: "Regenerating Subsurface Soil",
+                depth: 450,
+                pH: "6.5-7.0",
+                temperature: "30-34°C",
+                description: "Fifteen centimeters below WAWO3's layer, this brown, fine soil shows early natural regeneration with emerging organic matter and microbial recolonization.",
+                category: "Waste & Contamination",
+                site: "Water Works",
+                position: "left"
+            },
+            {
+                id: "OAF17",
+                name: "Sun-Dried Irrigated Soil",
+                depth: 450,
+                pH: "6.0-6.5",
+                temperature: "34-38°C",
+                description: "Previously irrigated soil now exposed to intense sun, developing a crusty surface with pale, drying patches and salt deposits at the edges.",
+                category: "Moisture & Depth",
+                site: "Old Airfield",
+                position: "right"
+            },
+            
+            // Depth 500mm
+            {
+                id: "OAF3.2",
+                name: "Subsurface Soil",
+                depth: 500,
+                pH: "6.0-6.5",
+                temperature: "25-30°C",
+                description: "Deeper, less intense red soil with root fragments and small stone sediments; supports Rhizobia and burrowing insects; more stable and moisture-retentive.",
+                category: "Surface & Residue",
+                site: "Old Airfield",
+                position: "left"
+            },
+            {
+                id: "WAWO5",
+                name: "Powerplant Proximal Soil",
+                depth: 500,
+                pH: "6.8-7.2",
+                temperature: "32-36°C",
+                description: "Dark red soil near the waterworks powerplant truck area. Mechanically disturbed and influenced by industrial runoff, its oxidized hue hints at a strong mineral composition.",
+                category: "Waste & Contamination",
+                site: "Water Works",
+                position: "right"
+            }
+        ];
+        
+        // Variables for tracking scroll position and depth
+        let currentDepth = 0;
+        let maxDepth = 500; // Maximum depth in mm
+        let depthScale = 7; // Pixels per mm depth (adjusted for better spacing)
+        let visibilityThreshold = 200; // Controls when samples appear/disappear
+        
+        // DOM elements
+        const soilColumn = document.getElementById('soil-column');
+        const currentDepthText = document.querySelector('.current-depth-indicator');
+        
+        // Create depth markers on the left side
+        function createDepthMarkers() {
+            // Add static depth markers every 25mm - exactly matching screenshot
+            const depths = [
+                0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275,
+                300, 325, 350, 375, 400, 425, 450, 475, 500
+            ];
+            
+            depths.forEach(depth => {
+                // Create marker div
+                const marker = document.createElement('div');
+                marker.className = 'depth-marker';
+                marker.style.top = (depth * depthScale) + 'px';
+                
+                // Format the depth display exactly like in the screenshot
+                if (depth === 0) {
+                    marker.textContent = '0.00 MM';
+                } else {
+                    marker.textContent = `-${depth} MM`;
+                }
+                
+                // Add to the soil column
+                soilColumn.appendChild(marker);
+                
+                // Add a horizontal line at this depth
+                const line = document.createElement('div');
+                line.className = 'soil-layer-line';
+                line.style.top = (depth * depthScale) + 'px';
+                soilColumn.appendChild(line);
+            });
+        }
+        
+        // Create soil samples
+        function createSoilSamples() {
+            soilData.forEach(sample => {
+                const sampleElement = document.createElement('div');
+                sampleElement.className = 'soil-sample';
+                sampleElement.dataset.depth = sample.depth;
+                
+                // Position based on depth with some vertical randomness
+                const randomVerticalOffset = Math.random() * 20 - 10; // -10 to +10px
+                sampleElement.style.top = ((sample.depth * depthScale) + randomVerticalOffset) + 'px';
+                
+                // Randomized horizontal positioning
+                // Give more variety but avoid extreme edges and maintain some separation
+                let horizontalPosition;
+                
+                if (sample.position === "left") {
+                    // Random position between 10% and 40%
+                    horizontalPosition = 10 + Math.random() * 30;
+                } else {
+                    // Random position between 60% and 90%
+                    horizontalPosition = 60 + Math.random() * 30;
+                }
+                
+                sampleElement.style.left = horizontalPosition + "%";
+                
+                // Initially hide all samples except the first few
+                if (sample.depth > 100) {
+                    sampleElement.style.opacity = '0';
+                    sampleElement.style.pointerEvents = 'none';
+                }
+                
+                // Create content
+                sampleElement.innerHTML = `
+                    <div class="sample-dot"></div>
+                    <div class="sample-line"></div>
+                    <div class="sample-content">
+                        <h3 class="sample-title">${sample.name} (${sample.id})</h3>
+                        <div class="sample-metadata">
+                            Site: ${sample.site} | Category: ${sample.category} | Depth: ${sample.depth}mm | pH: ${sample.pH} | Temperature: ${sample.temperature}
+                        </div>
+                        <p class="sample-description">${sample.description}</p>
+                    </div>
+                `;
+                
+                soilColumn.appendChild(sampleElement);
+            });
+        }
+        
+        // Initialize
+        createDepthMarkers();
+        createSoilSamples();
+        
+        // Set the total height of the soil column based on max depth
+        soilColumn.style.height = (maxDepth * depthScale + window.innerHeight) + 'px';
+        
+        // Update visible samples and depth indicator based on scroll position
+        function updateVisibleSamples() {
+            const scrollPos = window.scrollY;
+            // Convert scroll position to depth in millimeters
+            currentDepth = Math.max(0, scrollPos / depthScale);
+            
+            // Update the depth indicator text
+            currentDepthText.textContent = `Depth: ${Math.min(currentDepth, maxDepth).toFixed(0)} mm`;
+            
+            // Show/hide samples based on current depth
+            const samples = document.querySelectorAll('.soil-sample');
+            samples.forEach(sample => {
+                const sampleDepth = parseFloat(sample.dataset.depth);
+                
+                // Calculate if sample should be visible
+                // Show samples that are near the current depth
+                const distanceFromCurrent = Math.abs(sampleDepth - currentDepth);
+                
+                if (distanceFromCurrent < visibilityThreshold && sampleDepth <= currentDepth + 100) {
+                    sample.style.opacity = '1';
+                    sample.style.pointerEvents = 'auto';
+                } else {
+                    sample.style.opacity = '0';
+                    sample.style.pointerEvents = 'none';
+                }
+            });
+        }
+        
+        // Add scroll event listener
+        window.addEventListener('scroll', updateVisibleSamples);
+        window.addEventListener('resize', function() {
+            // Recalculate column height on resize
+            soilColumn.style.height = (maxDepth * depthScale + window.innerHeight) + 'px';
+            updateVisibleSamples();
+        });
+        
+        // Initial update
+        updateVisibleSamples();
+    </script>
+</body>
+</html>

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Radial Visualization | Tamale</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            color: #000;
+            background-color: #fff;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .visualization-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .soil-sample {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 15s cubic-bezier(0.25, 0.1, 0.25, 1);
+            z-index: 5;
+        }
+        
+        .sample-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #000;
+            margin-bottom: 5px;
+        }
+        
+        .sample-line {
+            width: 1px;
+            height: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            margin-bottom: 5px;
+        }
+        
+        .sample-content {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 4px;
+            max-width: 180px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sample-title {
+            font-size: 12px;
+            font-weight: 300;
+            margin-bottom: 4px;
+        }
+        
+        .sample-metadata {
+            font-size: 10px;
+            color: rgba(0, 0, 0, 0.7);
+            font-weight: 200;
+        }
+    </style>
+</head>
+<body>
+    <div class="visualization-container" id="visualization"></div>
+    
+    <script>
+        // Categories and their positions on screen - modified for more even distribution
+        const categories = {
+            commodity: { x: 80, y: 15 },  // Top right
+            archive: { x: 15, y: 85 },    // Bottom left
+            network: { x: 80, y: 85 },    // Bottom right
+            mid_left: { x: 15, y: 50 },   // Middle left
+            mid_right: { x: 85, y: 50 },  // Middle right
+            mid_top: { x: 50, y: 15 },    // Middle top
+            mid_bottom: { x: 50, y: 85 }  // Middle bottom
+        };
+        
+        // Soil samples data with category assignments
+        const soilData = [
+            // Commodity category
+            // Redistribute some samples from clustered areas to more open spaces
+            {
+                id: "OAF5",
+                name: "Construction Sands",
+                pH: "6.5-8.0",
+                temperature: "30-38°C",
+                site: "Old Airfield",
+                category: "mid_top",
+                strength: 0.9
+            },
+            {
+                id: "OAF6.1",
+                name: "Gravel Layer",
+                pH: "7.0-8.5",
+                temperature: "30-35°C",
+                site: "Old Airfield",
+                category: "commodity",
+                strength: 0.85
+            },
+            {
+                id: "OAF6.2",
+                name: "Subsurface Gravel with Clay Infill",
+                pH: "6.8-7.2",
+                temperature: "28-30°C",
+                site: "Old Airfield",
+                category: "commodity",
+                strength: 0.95
+            },
+            {
+                id: "OAF7",
+                name: "Sand Pile Residue Soil",
+                pH: "7.0-7.5",
+                temperature: "32-36°C",
+                site: "Old Airfield",
+                category: "commodity",
+                strength: 0.98
+            },
+            {
+                id: "OAF8",
+                name: "Excavated Edge Soil",
+                pH: "6.0-6.5",
+                temperature: "30-32°C",
+                site: "Old Airfield",
+                category: "commodity",
+                strength: 0.92
+            },
+            {
+                id: "WAWO5",
+                name: "Powerplant Proximal Soil",
+                pH: "6.8-7.2",
+                temperature: "32-36°C",
+                site: "Water Works",
+                category: "commodity",
+                strength: 0.94
+            },
+            {
+                id: "OAF1",
+                name: "Soil Above Airfield Tarmac",
+                pH: "5.5-6.5",
+                temperature: "33-38°C",
+                site: "Old Airfield",
+                category: "commodity",
+                strength: 0.9
+            },
+            {
+                id: "OAF2",
+                name: "Residential Soil with Ceramic Residue",
+                pH: "6.5-7.5",
+                temperature: "30-34°C",
+                site: "Old Airfield",
+                category: "mid_right",
+                strength: 0.75
+            },
+            {
+                id: "OAF22",
+                name: "Tire-Impressed Soil",
+                pH: "6.5-7.0",
+                temperature: "30-34°C",
+                site: "Old Airfield",
+                category: "mid_top",
+                strength: 0.85
+            },
+            {
+                id: "WAWO10",
+                name: "Irrigation Channel Sediment",
+                pH: "6.8-7.2",
+                temperature: "27-30°C",
+                site: "Water Works",
+                category: "mid_right",
+                strength: 0.8
+            },
+            
+            // Cultural Archive category
+            {
+                id: "WAWO1.1",
+                name: "Burned Renewal Soil",
+                pH: "5.5-6.0",
+                temperature: "32-36°C",
+                site: "Water Works",
+                category: "archive",
+                strength: 0.9
+            },
+            {
+                id: "WAWO1.4",
+                name: "Soil 20 Minutes After Burn",
+                pH: "5.0-5.5",
+                temperature: "45-55°C",
+                site: "Water Works",
+                category: "mid_bottom",
+                strength: 0.85
+            },
+            {
+                id: "OAF9",
+                name: "Soil Immediately After Burn",
+                pH: "4.5-5.0",
+                temperature: "60-70°C",
+                site: "Old Airfield",
+                category: "archive",
+                strength: 0.99
+            },
+            {
+                id: "OAF10",
+                name: "Soil 1 Day After Burn",
+                pH: "5.0-5.5",
+                temperature: "34-38°C",
+                site: "Old Airfield",
+                category: "archive",
+                strength: 0.94
+            },
+            {
+                id: "OAF11",
+                name: "Soil 2 Weeks After Burn",
+                pH: "6.0-6.5",
+                temperature: "30-32°C",
+                site: "Old Airfield",
+                category: "archive",
+                strength: 0.9
+            },
+            {
+                id: "OAF12",
+                name: "Charcoal-Embedded Soil",
+                pH: "5.5-6.0",
+                temperature: "32-36°C",
+                site: "Old Airfield",
+                category: "mid_left",
+                strength: 0.8
+            },
+            {
+                id: "OAF13",
+                name: "Scorched Edge Soil Near Concrete",
+                pH: "5.0-5.5",
+                temperature: "36-40°C",
+                site: "Old Airfield",
+                category: "archive",
+                strength: 0.8
+            },
+            {
+                id: "OAF21",
+                name: "Soil Along Abandoned Wall",
+                pH: "6.2-6.8",
+                temperature: "32-36°C",
+                site: "Old Airfield",
+                category: "archive",
+                strength: 0.85
+            },
+            {
+                id: "WAWO3",
+                name: "Contaminated Post-Trash Soil",
+                pH: "4.0-5.0",
+                temperature: "34-38°C",
+                site: "Water Works",
+                category: "archive",
+                strength: 0.92
+            },
+            {
+                id: "WAWO1.2",
+                name: "Cabbage Patch Soil",
+                pH: "6.8-7.2",
+                temperature: "28-32°C",
+                site: "Water Works",
+                category: "archive",
+                strength: 0.86
+            },
+            {
+                id: "WAWO6",
+                name: "Tomato Farming Soil",
+                pH: "6.0-6.8",
+                temperature: "30-34°C",
+                site: "Water Works",
+                category: "archive",
+                strength: 0.89
+            },
+            {
+                id: "WAWO9",
+                name: "Fallow Field Soil",
+                pH: "6.5-7.0",
+                temperature: "30-34°C",
+                site: "Water Works",
+                category: "archive",
+                strength: 0.93
+            },
+            
+            // Living Network category
+            {
+                id: "OAF3.1",
+                name: "Generic Topsoil (Surface)",
+                pH: "5.0-6.0",
+                temperature: "36-40°C",
+                site: "Old Airfield",
+                category: "network",
+                strength: 0.85
+            },
+            {
+                id: "OAF3.2",
+                name: "Subsurface Soil",
+                pH: "6.0-6.5",
+                temperature: "25-30°C",
+                site: "Old Airfield",
+                category: "mid_bottom",
+                strength: 0.8
+            },
+            {
+                id: "OAF4",
+                name: "Burned Black Soil (Puddle Edge)",
+                pH: "4.5-5.5",
+                temperature: "28-32°C",
+                site: "Old Airfield",
+                category: "network",
+                strength: 0.85
+            },
+            {
+                id: "WAWO1.3",
+                name: "Freshly Planted Soil",
+                pH: "6.0-6.5",
+                temperature: "26-30°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.94
+            },
+            {
+                id: "WAWO1.5",
+                name: "Irrigated Evening Soil",
+                pH: "6.5-7.0",
+                temperature: "26-28°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.97
+            },
+            {
+                id: "WAWO2.2",
+                name: "Subsurface Buffer Soil",
+                pH: "7.2-7.8",
+                temperature: "28-32°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.92
+            },
+            {
+                id: "WAWO2.3",
+                name: "Shaded Buffer Soil under Neem Tree",
+                pH: "6.8-7.0",
+                temperature: "27-30°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.99
+            },
+            {
+                id: "WAWO4",
+                name: "Regenerating Subsurface Soil",
+                pH: "6.5-7.0",
+                temperature: "30-34°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.96
+            },
+            {
+                id: "OAF15",
+                name: "Subsurface Irrigated Soil",
+                pH: "6.8-7.2",
+                temperature: "26-28°C",
+                site: "Old Airfield",
+                category: "network",
+                strength: 0.94
+            },
+            {
+                id: "OAF18",
+                name: "Deep Subsurface Soil",
+                pH: "6.8-7.2",
+                temperature: "25-27°C",
+                site: "Old Airfield",
+                category: "network",
+                strength: 0.98
+            },
+            {
+                id: "OAF20",
+                name: "Shade Soil Beneath Tree at Airfield Edge",
+                pH: "6.8-7.2",
+                temperature: "27-30°C",
+                site: "Old Airfield",
+                category: "network",
+                strength: 0.95
+            },
+            {
+                id: "WAWO7",
+                name: "Watering Hole Soil",
+                pH: "7.0-7.5",
+                temperature: "28-32°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.91
+            },
+            {
+                id: "WAWO8",
+                name: "Dry Riverbed Soil",
+                pH: "7.0-7.8",
+                temperature: "34-38°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.88
+            },
+            {
+                id: "WAWO8.1",
+                name: "Shallow River Margin Soil",
+                pH: "6.8-7.2",
+                temperature: "28-30°C",
+                site: "Water Works",
+                category: "mid_right",
+                strength: 0.8
+            },
+            {
+                id: "WAWO8.2",
+                name: "Subsurface River Margin",
+                pH: "7.2-7.6",
+                temperature: "26-28°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.85
+            },
+            {
+                id: "WAWO8.3",
+                name: "Sun-Baked Riverbank Edge Soil",
+                pH: "6.5-7.0",
+                temperature: "36-40°C",
+                site: "Water Works",
+                category: "network",
+                strength: 0.86
+            },
+            
+            // Cross-category samples (between two lenses)
+            {
+                id: "WAWO2.4",
+                name: "Edge-of-Furrow Soil",
+                pH: "6.2-6.5",
+                temperature: "30-34°C",
+                site: "Water Works",
+                category: "network_commodity",
+                strength: 0.65
+            },
+            {
+                id: "WAWO2.5",
+                name: "Compacted Clay Corner Soil",
+                pH: "7.5-8.0",
+                temperature: "32-36°C",
+                site: "Water Works",
+                category: "network_commodity",
+                strength: 0.65
+            },
+            {
+                id: "WAWO6.1",
+                name: "Irrigated Tomato Soil",
+                pH: "6.2-6.8",
+                temperature: "28-30°C",
+                site: "Water Works",
+                category: "network_archive",
+                strength: 0.65
+            },
+            {
+                id: "OAF14",
+                name: "Irrigated Test Plot Soil",
+                pH: "6.5-7.0",
+                temperature: "27-30°C",
+                site: "Old Airfield",
+                category: "network_commodity",
+                strength: 0.65
+            },
+            {
+                id: "OAF16",
+                name: "Post-Rain Puddle Soil",
+                pH: "6.5-7.0",
+                temperature: "25-28°C",
+                site: "Old Airfield",
+                category: "network_archive",
+                strength: 0.65
+            },
+            {
+                id: "OAF17",
+                name: "Sun-Dried Irrigated Soil",
+                pH: "6.0-6.5",
+                temperature: "34-38°C",
+                site: "Old Airfield",
+                category: "network_commodity",
+                strength: 0.65
+            },
+            {
+                id: "OAF19",
+                name: "Runoff Channel Soil",
+                pH: "6.5-7.0",
+                temperature: "28-30°C",
+                site: "Old Airfield",
+                category: "network_commodity",
+                strength: 0.65
+            },
+            {
+                id: "OAF23",
+                name: "Windblown Red Dust",
+                pH: "5.5-6.0",
+                temperature: "36-40°C",
+                site: "Old Airfield",
+                category: "network_archive",
+                strength: 0.65
+            },
+            // Roadside Dust Soil - move to mid_left so it's not alone
+            {
+                id: "WAWO11",
+                name: "Roadside Dust Soil",
+                pH: "6.0-6.5",
+                temperature: "34-38°C",
+                site: "Water Works",
+                category: "mid_left",
+                strength: 0.8
+            },
+            {
+                id: "WAWO12",
+                name: "Post-Rain Puddle Soil",
+                pH: "6.5-7.0",
+                temperature: "25-28°C",
+                site: "Water Works",
+                category: "network_archive",
+                strength: 0.65
+            },
+            {
+                id: "WAWO13",
+                name: "Windblown Field Edge Soil",
+                pH: "6.0-6.5",
+                temperature: "32-36°C",
+                site: "Water Works",
+                category: "network_archive",
+                strength: 0.65
+            },
+            {
+                id: "WAWO2.1",
+                name: "Treaded Buffer Soil",
+                pH: "7.0-7.5",
+                temperature: "32-36°C",
+                site: "Water Works",
+                category: "network_commodity",
+                strength: 0.65
+            }
+        ];
+        
+        // Create soil sample elements
+        function createSoilSamples() {
+            const container = document.getElementById('visualization');
+            const containerWidth = container.offsetWidth;
+            const containerHeight = container.offsetHeight;
+            const centerX = containerWidth / 2;
+            const centerY = containerHeight / 2;
+            
+            // Create and position each sample
+            soilData.forEach((sample, index) => {
+                // Create soil sample element
+                const sampleElement = document.createElement('div');
+                sampleElement.className = 'soil-sample';
+                sampleElement.id = `sample-${sample.id}`;
+                
+                // Position at center initially
+                sampleElement.style.transform = 'translate(-50%, -50%)';
+                
+                // Calculate final position based on category
+                let targetX, targetY;
+                const margin = 0.05; // Reduced margin to allow samples to go closer to edges
+                
+                // Handle all category types safely
+                if (sample.category.includes('_') && sample.category.split('_').length === 2) {
+                    const [cat1, cat2] = sample.category.split('_');
+                    
+                    // Check if both categories exist
+                    if (categories[cat1] && categories[cat2]) {
+                        // Position between two categories
+                        targetX = ((categories[cat1].x * (1-margin) + categories[cat2].x * (1-margin)) / 2);
+                        targetY = ((categories[cat1].y * (1-margin) + categories[cat2].y * (1-margin)) / 2);
+                    } else {
+                        // Fallback if categories don't exist
+                        targetX = 50 + (Math.random() * 40 - 20);
+                        targetY = 50 + (Math.random() * 40 - 20);
+                    }
+                } else if (categories[sample.category]) {
+                    // For pure category samples, position toward category but not all the way
+                    const strength = sample.strength;
+                    // Interpolate between center (50%) and category position based on strength
+                    targetX = 50 + (categories[sample.category].x - 50) * strength * (1-margin);
+                    targetY = 50 + (categories[sample.category].y - 50) * strength * (1-margin);
+                } else {
+                    // Fallback for any category that doesn't exist
+                    console.log("Warning: Unknown category", sample.category);
+                    targetX = 50 + (Math.random() * 40 - 20);
+                    targetY = 50 + (Math.random() * 40 - 20);
+                }
+                
+                // Add randomness to prevent perfect alignment and overlaps
+                const randomOffset = 5; // Reduced random offset percentage for more controlled placement
+                targetX += (Math.random() * randomOffset * 2) - randomOffset;
+                targetY += (Math.random() * randomOffset * 2) - randomOffset;
+                
+                // Ensure we stay within boundaries
+                targetX = Math.max(2, Math.min(98, targetX));
+                targetY = Math.max(2, Math.min(98, targetY));
+                
+                // Delay the animation start slightly for each sample to create staggered effect
+                const delay = Math.random() * 2;
+                
+                // Set content
+                sampleElement.innerHTML = `
+                    <div class="sample-dot"></div>
+                    <div class="sample-line"></div>
+                    <div class="sample-content">
+                        <h3 class="sample-title">${sample.name} (${sample.id})</h3>
+                        <div class="sample-metadata">
+                            Site: ${sample.site} | pH: ${sample.pH} | Temp: ${sample.temperature}
+                        </div>
+                    </div>
+                `;
+                
+                // Add to container
+                container.appendChild(sampleElement);
+                
+                // Start animation after a small delay
+                setTimeout(() => {
+                    sampleElement.style.left = targetX + '%';
+                    sampleElement.style.top = targetY + '%';
+                }, delay * 1000);
+            });
+            
+            // After animation is complete, check for overlaps and adjust multiple times
+            setTimeout(adjustOverlaps, 16000);
+            // Run a second overlap check after the first adjustments
+            setTimeout(adjustOverlaps, 18000);
+        }
+        
+        // Function to check for and fix overlapping samples
+        function adjustOverlaps() {
+            const samples = document.querySelectorAll('.soil-sample');
+            const positions = [];
+            
+            // Get positions of all samples
+            samples.forEach(sample => {
+                const rect = sample.getBoundingClientRect();
+                positions.push({
+                    sample: sample,
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    width: rect.width,
+                    height: rect.height
+                });
+            });
+            
+            // Check for overlaps - run multiple passes to ensure better separation
+            for (let pass = 0; pass < 3; pass++) {
+                for (let i = 0; i < positions.length; i++) {
+                    for (let j = i + 1; j < positions.length; j++) {
+                        const a = positions[i];
+                        const b = positions[j];
+                        
+                        // Check if they overlap
+                        if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) {
+                            // Calculate the center points
+                            const aCenterX = (a.left + a.right) / 2;
+                            const aCenterY = (a.top + a.bottom) / 2;
+                            const bCenterX = (b.left + b.right) / 2;
+                            const bCenterY = (b.top + b.bottom) / 2;
+                            
+                            // Calculate direction to push
+                            const pushDirX = aCenterX - bCenterX;
+                            const pushDirY = aCenterY - bCenterY;
+                            
+                            // Normalize the direction
+                            const distance = Math.sqrt(pushDirX * pushDirX + pushDirY * pushDirY);
+                            const normalizedDirX = pushDirX / distance;
+                            const normalizedDirY = pushDirY / distance;
+                            
+                            // Push both samples apart - increased push distance for better separation
+                            const pushDistance = Math.max(40, (a.width + b.width) / 3);
+                            
+                            // Get current positions as percentages
+                            const aCurrentLeft = parseFloat(a.sample.style.left) || 50;
+                            const aCurrentTop = parseFloat(a.sample.style.top) || 50;
+                            const bCurrentLeft = parseFloat(b.sample.style.left) || 50;
+                            const bCurrentTop = parseFloat(b.sample.style.top) || 50;
+                            
+                            // Calculate new positions
+                            let aNewLeft = aCurrentLeft + (normalizedDirX * pushDistance * 0.5) / window.innerWidth * 100;
+                            let aNewTop = aCurrentTop + (normalizedDirY * pushDistance * 0.5) / window.innerHeight * 100;
+                            let bNewLeft = bCurrentLeft - (normalizedDirX * pushDistance * 0.5) / window.innerWidth * 100;
+                            let bNewTop = bCurrentTop - (normalizedDirY * pushDistance * 0.5) / window.innerHeight * 100;
+                            
+                            // Keep within bounds
+                            aNewLeft = Math.max(2, Math.min(98, aNewLeft));
+                            aNewTop = Math.max(2, Math.min(98, aNewTop));
+                            bNewLeft = Math.max(2, Math.min(98, bNewLeft));
+                            bNewTop = Math.max(2, Math.min(98, bNewTop));
+                            
+                            // Apply the new positions
+                            a.sample.style.transition = 'all 1s ease';
+                            b.sample.style.transition = 'all 1s ease';
+                            a.sample.style.left = aNewLeft + '%';
+                            a.sample.style.top = aNewTop + '%';
+                            b.sample.style.left = bNewLeft + '%';
+                            b.sample.style.top = bNewTop + '%';
+                            
+                            // Update the position arrays
+                            a.left = a.left + normalizedDirX * pushDistance;
+                            a.top = a.top + normalizedDirY * pushDistance;
+                            a.right = a.right + normalizedDirX * pushDistance;
+                            a.bottom = a.bottom + normalizedDirY * pushDistance;
+                            
+                            b.left = b.left - normalizedDirX * pushDistance;
+                            b.top = b.top - normalizedDirY * pushDistance;
+                            b.right = b.right - normalizedDirX * pushDistance;
+                            b.bottom = b.bottom - normalizedDirY * pushDistance;
+                        }
+                    }
+                }
+                
+                // Wait briefly before the next pass
+                if (pass < 2) {
+                    setTimeout(() => {}, 500);
+                }
+            }
+        }
+        
+        // Initialize the visualization
+        document.addEventListener('DOMContentLoaded', createSoilSamples);
+    </script>
+</body>
+</html>
